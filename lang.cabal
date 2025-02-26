@@ -1,0 +1,40 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.37.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           lang
+version:        0.1.0.0
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    LICENSE
+
+library
+  exposed-modules:
+      Imp.Frontend.Lexer.Lexer
+      Imp.Frontend.Parser.Recursive.Parser
+      Imp.Syntax.Syntax
+      Main
+      Parser.Recursive.SimpleCombinators
+      Parser.Recursive.SimpleExpr
+  other-modules:
+      Paths_lang
+  hs-source-dirs:
+      src
+  default-extensions:
+      OverloadedStrings
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      array
+    , base
+    , bytestring
+    , containers
+    , filepath
+    , mtl
+  default-language: Haskell2010

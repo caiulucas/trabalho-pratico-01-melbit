@@ -1,0 +1,168 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{hyperref}
+
+% Configuração para exibição de código
+\definecolor{codebg}{rgb}{0.95,0.95,0.95}
+\definecolor{codeframe}{rgb}{0.8,0.8,0.8}
+\lstset{
+    language=Haskell,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    numbers=left,
+    stepnumber=1,
+    numbersep=5pt,
+    breaklines=true,
+    frame=single,
+    captionpos=b,
+    tabsize=2,
+    escapeinside={(@}{@)},
+}
+\title{Relatório do Trabalho de Construção de Compiladores}
+\author{Gustavo Zacarias Souza - 22.1.4112 \\ Caio Lucas Pereira da Silva - 22.1.4006}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\newpage
+
+\section{Introdução}
+
+Este relatório descreve o processo de desenvolvimento de um compilador para uma linguagem de programação simplificada. O trabalho foi realizado como parte da disciplina de Construção de Compiladores e aborda a implementação de um analisador léxico, um analisador sintático e a interpretação de programas. 
+
+Serão apresentados detalhes sobre as decisões de projeto, como o uso de expressões regulares para definição de tokens, a escolha de estruturas de dados, e as estratégias adotadas para a implementação do analisador léxico, do parser e do interpretador. O objetivo principal é facilitar o entendimento das soluções implementadas, bem como fornecer informações para compilar e executar o código entregue.
+
+\section{Decisões de Projeto}
+
+\subsection{Definição dos Tokens}
+
+Para a análise léxica, definimos os tokens utilizando expressões regulares. Estas foram elaboradas para reconhecer palavras-chave, operadores, identificadores, números e símbolos da linguagem. Abaixo estão exemplos atualizados das definições de tokens relevantes:
+
+\begin{lstlisting}[language=Haskell, caption={Definição de tokens em Alex}]
+$digit = 0-9
+$alpha = [a-zA-Z]
+@identifier = $alpha[$alpha $digit]*
+@number = $digit+
+
+<0> "int" { simpleToken TTInt }
+<0> "bool" { simpleToken TTBool }
+<0> "float" { simpleToken TFloat }
+<0> "char" { simpleToken TChar }
+\end{lstlisting}
+
+Cada token identificado é associado a um tipo no Haskell, conforme o exemplo abaixo:
+
+\begin{lstlisting}[language=Haskell, caption={Exemplo de associação de tokens a tipos}]
+data Lexeme =
+    | TIdent String
+    | TNumber Int
+    | TAssign
+    | TPlus
+    | TTInt
+    | TTBool
+    | ...
+\end{lstlisting}
+
+Essas definições permitem um reconhecimento preciso de cada elemento da linguagem, suportando a extensibilidade para novos tipos de dados e operadores.
+
+\subsection{Estratégia do Analisador Léxico}
+
+O analisador léxico foi implementado utilizando a ferramenta Alex, que transforma as expressões regulares em um scanner de tokens. A estrutura de estado foi usada para lidar com comentários aninhados e outros casos específicos:
+
+\begin{lstlisting}[language=Haskell, caption={Gerenciamento de estados para comentários}]
+nestComment :: AlexAction Token
+nestComment input len = do
+  modify $ \s -> s { nestLevel = nestLevel s + 1 }
+  skip input len
+\end{lstlisting}
+
+\subsection{Estratégia do Parser}
+
+O analisador sintático foi construído com combinadores recursivos. Isso simplifica a modularidade do código e permite lidar com diferentes expressões e declarações. Segue um exemplo:
+
+\begin{lstlisting}[language=Haskell, caption={Parser para declarações de variáveis}]
+varDeclParser :: Parser Char Decl
+varDeclParser
+  = Decl <$> varParser <*> (doubleColon *> tyParser)
+\end{lstlisting}
+
+O parser implementa suporte para funções, estruturas de controle, operadores lógicos e aritméticos, e blocos de código. Entretanto, apesar dos esforços, não conseguimos alcançar a funcionalidade completa esperada. Problemas como ambiguidade em algumas gramáticas e dificuldade em gerenciar certos tipos de erros de entrada comprometeram o desempenho ideal do parser. Ainda assim, acreditamos que a estrutura modular servirá como base para futuras melhorias.
+
+Um exemplo de problema ocorre no suporte para expressões aninhadas e funções com múltiplos retornos, onde o parser não trata corretamente casos mais complexos. Testamos várias abordagens, mas o parser continua apresentando limitações em cenários específicos.
+
+\section{Desenvolvimento}
+
+Durante o desenvolvimento, enfrentamos desafios como a implementação de comentários aninhados e a criação de um parser que lida com múltiplas operações em cadeia. Apesar disso, avançamos significativamente na construção de componentes como o analisador sintático e léxico.
+
+\subsection{Estruturas de Dados}
+
+A estrutura de dados principal do programa é definida no módulo \texttt{Syntax.hs}. Os componentes chave incluem:
+
+\begin{lstlisting}[language=Haskell, caption={Definição de Expressões e Declarações}]
+data Exp
+    = Exp :+: Exp              
+    | Exp :-: Exp              
+    | Exp :*: Exp              
+    | Exp :&&: Exp             
+    | ENot Exp
+    | EValue Value
+    deriving (Eq, Show)
+
+data Decl = Decl Var Type
+    deriving (Eq, Show)
+\end{lstlisting}
+
+Essa abordagem organiza bem os diferentes elementos da linguagem, separando expressões, declarações e valores de forma clara.
+
+\subsection{Exemplo de Análise}
+
+Para ilustrar o fluxo do compilador, considere o seguinte exemplo de entrada e seu processo:
+
+\begin{lstlisting}[language=Haskell, caption={Exemplo de código de entrada}]
+int main() {
+  print(10);
+}
+\end{lstlisting}
+
+A análise léxica gera os seguintes tokens:
+
+\begin{lstlisting}[language=Haskell]
+[Token TIdent "main", Token TLParen, Token TRParen, ...]
+\end{lstlisting}
+
+O parser então constrói a seguinte estrutura sintática:
+
+\begin{lstlisting}[language=Haskell]
+Program [Function "main" [] TInt [] [Print (EValue (EInt 10))]]
+\end{lstlisting}
+
+No entanto, como mencionado anteriormente, o parser falha em lidar com entradas mais complexas, como funções aninhadas ou expressões compostas, devido a limitações na implementação atual.
+
+\section{Conclusão}
+
+A implementação do compilador proporcionou uma visão aprofundada das técnicas de análise léxica e sintática, bem como da estruturação de linguagens. Apesar das dificuldades, o projeto demonstrou ser um exercício valioso em modularidade e design de software. O parser, embora funcional em casos simples, não alcançou 100\% de eficiência, e essa limitação será um ponto de aprendizado para trabalhos futuros.
+
+\subsection*{Passos para Compilar e Executar}
+Para compilar e executar o código deste projeto, siga as etapas abaixo:
+
+\begin{enumerate}
+    \item Compile o programa utilizando o \texttt{stack}:
+    \begin{lstlisting}[language=bash]
+    stack build
+    \end{lstlisting}
+
+    \item Execute o analisador léxico para gerar tokens:
+    \begin{lstlisting}[language=bash]
+    ./Lang --lexer nome_do_arquivo
+    \end{lstlisting}
+\end{enumerate}
+
+\end{document}
