@@ -130,15 +130,6 @@ exp :: { Exp L.Range }
   -- Logical operators
   | exp '&&' exp             { EBinOp (info $1 <-> info $3) $1 (And (L.rtRange $2)) $3 }
   | exp '||' exp             { EBinOp (info $1 <-> info $3) $1 (Or (L.rtRange $2)) $3 }
-  | dec in exp               { ELetIn (info $1 <-> info $3) $1 $3 }
-  -- Exercise 3 bonus:
-  -- Note: Suppose we have this:
-  -- match 0 with | 0 -> match 1 with | 1 -> 1 | 2 -> 2
-  -- Shifting will cause it to parse like so:
-  -- match 0 with | 0 -> (match 1 with | 1 -> 1 | 2 -> 2)
-  -- Reducing would give:
-  -- (match 0 with | 0 -> match 1 with | 1 -> 1) | 2 -> 2
-
 case :: { Case L.Range }
   : '||' pat '->' exp { Case (L.rtRange $1 <-> info $4) $2 $4 }
 
